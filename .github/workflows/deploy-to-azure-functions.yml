@@ -1,0 +1,46 @@
+name: Deploy application to Microsoft Azure Functions
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+      - releases/*
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+
+env:
+  AZURE_FUNCTIONAPP_NAME: dogrod-api
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "."
+  NODE_VERSION: "16.x"
+
+jobs:
+  run:
+    name: Deploy to Azure Functions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub action
+        uses: actions/checkout@v2
+      - name: Setup Node ${{ env.NODE_VERSION }} Environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: "Resolve Project Dependencies Using Npm"
+        shell: bash
+        run: |
+          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+          npm install
+          npm run build --if-present
+          npm run test --if-present
+          popd
+      - name: "Run Azure Functions action"
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          # Set to true to enable verbose logging
+          # verbose: false
